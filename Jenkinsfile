@@ -108,7 +108,7 @@ def getToolLocations(toolLocations){
 //create HTML report file
 @NonCPS
 def parseJsonForXml() {
-  def htmlReport = new StringWriter()
+  htmlReport = new StringWriter()
   builder = new MarkupBuilder(htmlReport)
   tools = getDockerTemplates()
   builder.with {
