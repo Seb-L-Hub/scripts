@@ -163,7 +163,7 @@ def parseJsonForXml() {
   return writer
 }
 
-//Function to add Jenkins clouds infos
+//Function to add Jenkins clouds infos & templates
 @NonCPS
 def addCloud(xml, clouds, String name) {
   xml.with {
@@ -186,7 +186,7 @@ def addCloud(xml, clouds, String name) {
                   ['Environment variables':template.envVars]
                 ]
               )
-            } //end nodes
+            }
           }
         }
       }
@@ -194,7 +194,7 @@ def addCloud(xml, clouds, String name) {
   }
 }
 
-// Function to add a table with tools details
+// Function to add a table with nodes details
 @NonCPS
 def addNode(xml, details) {
   xml.with {
@@ -224,28 +224,11 @@ def addNode(xml, details) {
                     td(class: 'properties', "${detail.key}")
                     String image = detail.value
                     if (isSDP(image)){
+                      String doc = getDocumentationURL(image)
                       td {
                         div(image)
-                        div(class: 'image-documentation') { a(href: "${getDocumentationURL()}", 'docker image documentation') }
+                        div(class: 'image-documentation') { a(href: "${doc}", 'docker image documentation') }
                       }
-                    /*
-                    String SDP_REGISTRY_ID = 'sf'
-                    String SDP_REGISTRY_SUFFIX = '-docker-registry'
-                    String SDP_REGISTRY = SDP_REGISTRY_ID+SDP_REGISTRY_SUFFIX
-                    if (image.startsWith(SDP_REGISTRY)) {
-                      def config = [
-                        'serverName':'sec-nexus-01',
-                        'domainName':'devops.in.idemia.com',
-                        'contextURL':'/nexus',
-                        'repositoryURL':'service/local/repositories',
-                        'repositoryID':'mph-nexus-01-mogl-release',
-                        'artifactURL':'content'
-                      ]
-                      String group = image.substring(image.indexOf('/')+1, image.lastIndexOf('/'))
-                      String artifact = image.substring(image.lastIndexOf('/')+1, image.indexOf(':'))
-                      String version = image.split(':', 2)[1]
-                      String imageDocumentation = "https://${config.serverName}.${config.domainName}${config.contextURL}/${config.repositoryURL}/${config.repositoryID}/${config.artifactURL}/${group}/${artifact}/${version}/${artifact}-${version}.html"
-                      */
                     } else {
                       td(image)
                     }
@@ -319,9 +302,41 @@ def addEnvVars(xml, envVars) {
   }
 }
 
+//Determine if a docker image is provided from SDP team
+@NonCPS
+Boolean isSDP(image) {
+  String SDP_REGISTRY_ID = 'sf'
+  String SDP_REGISTRY_SUFFIX = '-docker-registry'
+  String SDP_REGISTRY = SDP_REGISTRY_ID+SDP_REGISTRY_SUFFIX
+  return image.startsWith(SDP_REGISTRY) ? true : false
+}
+
+//Get URL documentation for a SDP docker image
+@NonCPS
+def getDocumentationURL(image) {
+  def config = [
+    'serverName':'sec-nexus-01',
+    'domainName':'devops.in.idemia.com',
+    'contextURL':'/nexus',
+    'repositoryURL':'content/repositories',
+    'repositoryID':'mph-nexus-01-mogl-release'
+  ]
+  try {
+    String img = image.split('/', 2)[1]
+    String group = img.substring(0, img.lastIndexOf('/'))
+    String artifact = img.substring(img.lastIndexOf('/')+1, img.indexOf(':'))
+    String version = img.split(':', 2)[1]
+    String imageDocumentation = "https://${config.serverName}.${config.domainName}${config.contextURL}/${config.repositoryURL}/${config.repositoryID}/${group}/${artifact}/${version}/${artifact}-${version}.html"
+    return imageDocumentation
+  }
+  catch(Exception ex) {
+    return "https://${config.serverName}.${config.domainName}${config.contextURL}/${config.repositoryURL}/${config.repositoryID}/idemia/rds/sdp"
+  }
+}
+
 //Function to return CSS style
 @NonCPS
-def getCSS(){
+def getCSS() {
   return '''
   body {
     font-size: smaller;
