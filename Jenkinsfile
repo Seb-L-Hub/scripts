@@ -7,10 +7,6 @@ import hudson.tools.ToolLocationNodeProperty
 import hudson.slaves.EnvironmentVariablesNodeProperty
 import groovy.xml.MarkupBuilder
 
-// GLOBAL VARIABLES
-def htmlReport
-def builder
-
 pipeline {
   agent any
   stages {
@@ -108,10 +104,10 @@ def getToolLocations(toolLocations){
 //create HTML report file
 @NonCPS
 def parseJsonForXml() {
-  htmlReport = new StringWriter()
-  builder = new MarkupBuilder(htmlReport)
+  def writer = new StringWriter()
+  def html = new MarkupBuilder(writer)
   tools = getDockerTemplates()
-  builder.with {
+  html.with {
     html {
       head {
         title('Stylish Table Page')
@@ -139,6 +135,7 @@ def parseJsonForXml() {
             //nodes
             tools.nodes.each{ node ->
               addNode(
+                html,
                 [
                   ['Labels':node.labels],
                   ['Name':node.name],
@@ -155,21 +152,21 @@ def parseJsonForXml() {
           }
         } //end Jenkins nodes
         //Clouds (Docker & Kubernetes)
-        addCloud(tools.dockerCloud, "Docker")
-        addCloud(tools.kubernetesCloud, "Kubernetes")
+        addCloud(html, tools.dockerCloud, "Docker")
+        addCloud(html, tools.kubernetesCloud, "Kubernetes")
         div(class: 'footer') {
           h1('Bye bye')
         }
       }
     }
   }
-  return htmlReport
+  return writer
 }
 
 //Function to add Jenkins clouds infos
 @NonCPS
-def addCloud(clouds, String name) {
-  builder.with {
+def addCloud(xml, clouds, String name) {
+  xml.with {
     div(class: 'entry-type') {
       h2(class: 'entry-type-title', "${name} template(s)")
       clouds.each{ cloudEntry ->
@@ -179,6 +176,7 @@ def addCloud(clouds, String name) {
             //templates
             cloud.value.templates.each{ template ->
               addNode(
+                xml,
                 [
                   ['Labels':template.labels],
                   ['Name':template.name],
@@ -198,8 +196,8 @@ def addCloud(clouds, String name) {
 
 // Function to add a table with tools details
 @NonCPS
-def addNode(details) {
-  builder.with {
+def addNode(xml, details) {
+  xml.with {
     table(class: 'entry') {
       thead {
         tr {
@@ -225,6 +223,12 @@ def addNode(details) {
                   case 'Docker image':
                     td(class: 'properties', "${detail.key}")
                     String image = detail.value
+                    if (isSDP(image)){
+                      td {
+                        div(image)
+                        div(class: 'image-documentation') { a(href: "${getDocumentationURL()}", 'docker image documentation') }
+                      }
+                    /*
                     String SDP_REGISTRY_ID = 'sf'
                     String SDP_REGISTRY_SUFFIX = '-docker-registry'
                     String SDP_REGISTRY = SDP_REGISTRY_ID+SDP_REGISTRY_SUFFIX
@@ -241,24 +245,20 @@ def addNode(details) {
                       String artifact = image.substring(image.lastIndexOf('/')+1, image.indexOf(':'))
                       String version = image.split(':', 2)[1]
                       String imageDocumentation = "https://${config.serverName}.${config.domainName}${config.contextURL}/${config.repositoryURL}/${config.repositoryID}/${config.artifactURL}/${group}/${artifact}/${version}/${artifact}-${version}.html"
-                      td {
-                        div(image)
-                        div(class: 'image-documentation') { a(href: "${imageDocumentation}", 'Docker image documentation') }
-                      }
-                      //td("${detail.value}")
+                      */
                     } else {
-                      td("${detail.value}")
+                      td(image)
                     }
                     break
                   //tools
                   case 'Tools':
-                    td('Tools')
-                    addTools(detail.value)
+                    td(class: 'properties', "${detail.key}")
+                    addTools(xml, detail.value)
                     break
                   //envVars
                   case 'Environment variables':
-                    td('Environment variables')
-                    addEnvVars(detail.value)
+                    td(class: 'properties', "${detail.key}")
+                    addEnvVars(xml, detail.value)
                     break
                   default:
                     td(class: 'properties', "${detail.key}")
@@ -276,11 +276,11 @@ def addNode(details) {
 
 // Function to add a table with tools details
 @NonCPS
-def addTools(tools) {
-  builder.with {
+def addTools(xml, tools) {
+  xml.with {
     td {
       tools.each { toolName, toolData -> //tool type
-        h4(class: 'tool-name', "${toolName}:")
+        b { p(class: 'tool-name', "${toolName}:") }
         table(class: 'details-table') {
           tr {
             th('Name')
@@ -300,13 +300,13 @@ def addTools(tools) {
 
 // Function to add a table env variables
 @NonCPS
-def addEnvVars(envVars) {
-    builder.with {
+def addEnvVars(xml, envVars) {
+    xml.with {
       td {
       table(class: 'details-table') {
         tr {
           th('Name')
-          th('Home')
+          th('Value')
         }
         envVars.each { env -> //display all env variables
           tr {
@@ -402,6 +402,21 @@ def getCSS(){
   }
   .properties {
     width: 30%;
+  }
+  a {
+    text-decoration: none;
+    color: black;
+    border-bottom: 3px solid #0074d9;
+  }
+  a:hover {
+    color: black;
+    background-color: #0074d9;
+  }
+  a:visited {
+    color: black;
+  }
+  a:active {
+    color: #e74c3c;
   }
   button {
     background-color: #0074d9;
