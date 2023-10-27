@@ -12,27 +12,22 @@ pipeline {
   stages {
     stage('Test') {
       steps {
-        //ParseDockertemplates() //call template
         script{
-          Date date = new Date()
-          Jenkins.instance.setSystemMessage("Message: ${date}")
           //Set CSP header
           System.setProperty("hudson.model.DirectoryBrowserSupport.CSP", "sandbox allow-scripts allow-same-origin; default-src 'self' ;img-src 'self' data; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval';")
-          def result = getDockerTemplates()
-          //Testing(JsonOutput.toJson(result))
-          Testing(parseJsonForXml())
-          //println(parseJsonForXml())
+          publishReport(buildReport(getJenkinsNodes()), "${JENKINS_HOME}/userContent/test.html")
         }
       }
     }
   }
 }
 
+//Create file report inside userContent
 @NonCPS
-def Testing(content){
-  new File("${JENKINS_HOME}/userContent/test.html").withWriter('UTF-8') { writer ->
+def publishReport(content, reportPath){
+  new File(reportPath).withWriter('UTF-8') { writer ->
     try {
-      writer.write(content.toString())
+      writer.write(content)
     } finally {
       writer.close()
     }
@@ -40,9 +35,9 @@ def Testing(content){
   return
 }
 
-//get docker templates from the Jenkins instance
+//Get Jenkins slaves from instance (nodes + templates)
 @NonCPS
-def getDockerTemplates(){
+def getJenkinsNodes(){
   def jenkins = Jenkins.instance
   def data = ['nodes':[], 'dockerCloud':[], 'kubernetesCloud':[]]
 
@@ -93,7 +88,7 @@ def getDockerTemplates(){
   return data
 }
 
-//get tools from template configuration and order by tool type
+//get tools from template configuration and group by tool type
 @NonCPS
 def getToolLocations(toolLocations){
   def toolsLocation=toolLocations?.groupBy{it.type.displayName}
@@ -103,64 +98,94 @@ def getToolLocations(toolLocations){
 
 //create HTML report file
 @NonCPS
-def parseJsonForXml() {
+def buildReport(tools) {
   def writer = new StringWriter()
   def html = new MarkupBuilder(writer)
-  tools = getDockerTemplates()
   html.with {
     html {
       head {
         title('Stylish Table Page')
         style (getCSS())
       }
-      //Main content
+      //body content
       body {
+        //main header
         header {
-          h1('Jenkins')
+          h1('Jenkins - available tools')
         }
-        //Header
+        //presentation
         div(class: 'header') {
-          //Home button
+          //home button
           a(href: "${JENKINS_URL}") {
             button(type: 'button', 'Return to home page')
           }
         }
+        //welcome
         div(class: 'header') {
-          p('Hello, this HTML report is very intersting...')
+          h2('Welcome...')
+          p('This automated report display available Jenkins slaves on your instance with associated informations. This page is also presenting which tools have been declared for each node/template.')
+        }
+        //request new CI slave
+        div(class: 'header') {
+          h3('Need new CI slave ?')
+          p('Feel free to request a new CI slave on Jira and explain your needs.')
+          em {
+            p('Checkout our available docker images at: URL.')
+          }
+          //new CI slave
+          a(href: "https://jira.url.com") {
+            button(type: 'button', 'Request new CI slave')
+          }
         }
         //Jenkins nodes
-        div(class: 'entry-type') {
-          h2(class: 'entry-type-title', 'Jenkins nodes')
-          div(class: 'container') {
-            //nodes
-            tools.nodes.each{ node ->
-              addNode(
-                html,
-                [
-                  ['Labels':node.labels],
-                  ['Name':node.name],
-                  ['Launcher type':node.launcher],
-                  ['Hostname':node.hostname],
-                  ['Executors':node.instanceCap],
-                  ['Operating system':node.os],
-                  ['Status':node.status],
-                  ['Tools':node.toolsLocation],
-                  ['Environment variables':node.envVars]
-                ]
-              )
-            } //end nodes
-          }
-        } //end Jenkins nodes
+        if (tools.nodes){
+          div(class: 'entry-type') {
+            h2(class: 'entry-type-title', 'Jenkins nodes')
+            div(class: 'container') {
+              //nodes
+              tools.nodes.each{ node ->
+                addNode(
+                  html,
+                  [
+                    ['Labels':node.labels],
+                    ['Name':node.name],
+                    ['Launcher type':node.launcher],
+                    ['Hostname':node.hostname],
+                    ['Executors':node.instanceCap],
+                    ['Operating system':node.os],
+                    ['Status':node.status],
+                    ['Tools':node.toolsLocation],
+                    ['Environment variables':node.envVars]
+                  ]
+                )
+              } //end nodes
+            }
+          } //end Jenkins nodes
+        }
         //Clouds (Docker & Kubernetes)
-        addCloud(html, tools.dockerCloud, "Docker")
-        addCloud(html, tools.kubernetesCloud, "Kubernetes")
+        if (tools.dockerCloud){
+          addCloud(html, tools.dockerCloud, "Docker")
+        }
+        if (tools.kubernetesCloud){
+          addCloud(html, tools.kubernetesCloud, "Kubernetes")
+        }
+        //footer
         div(class: 'footer') {
-          h1('Bye bye')
+          h1('Any questions ?')
+          div {
+            p('Contact us on Jira anytime...')
+            a(href: "https://jira.url.com") {
+              button(type: 'button', 'HDESK request')
+            }
+            em {
+              p('The Software Development Team')
+            }
+          }
         }
       }
     }
   }
-  return writer
+  return writer.toString()
 }
 
 //Function to add Jenkins clouds infos & templates
