@@ -1,0 +1,4 @@
+Host,OS,IP Address
+{% for host, info in host_information.items() %}
+{{ host }},{{ info.os }},{{ info.ip }}
+{% endfor %}

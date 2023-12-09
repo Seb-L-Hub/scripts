@@ -1,0 +1,26 @@
+---
+- name: Retrieve OS and IP information
+  hosts: all
+  vars:
+    template_src: templates
+    template_dest: reports
+  connection: local
+  gather_facts: true
+  tasks:
+    - name: Display OS information
+      debug:
+        msg: "Host {{ inventory_hostname }} has {{ ansible_distribution }} {{ ansible_distribution_version }}"
+    - name: Display IP address
+      debug:
+        msg: "Host {{ inventory_hostname }} IP address is {{ ansible_host }}"
+    - name: Gather informations
+      set_fact:
+        host_information: "{{ host_information | default({}) | combine({ inventory_hostname: { 'os': ansible_distribution + ' ' + ansible_distribution_version, 'ip': ansible_host } }) }}"
+    - name: Create CSV report
+      template:
+        src: '{{ template_src }}/report_csv.j2'
+        dest: '{{ template_dest }}/host_information.csv'
+    - name: Create HTML report
+      template:
+        src: '{{ template_src }}/report_html.j2'
+        dest: '{{ template_dest }}/host_information.html'

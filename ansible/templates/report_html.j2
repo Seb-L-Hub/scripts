@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Host Information Report</title>
+  <style>
+    table {
+      font-family: Arial, sans-serif;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+  <h2>Host Information Report</h2>
+  <table>
+    <tr>
+      <th>Host</th>
+      <th>OS</th>
+      <th>IP Address</th>
+    </tr>
+    {% for host, info in host_information.items() %}
+    <tr>
+      <td>{{ host }}</td>
+      <td>{{ info.os }}</td>
+      <td>{{ info.ip }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
