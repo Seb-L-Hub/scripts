@@ -1,6 +1,5 @@
 pipeline {
   agent any
-  }
   options {
     buildDiscarder(logRotator(artifactNumToKeepStr: '10'))
     timestamps()
@@ -30,9 +29,16 @@ pipeline {
           git branch: 'gen_cleanup', changelog: false, credentialsId: 'jenkins-sdp-urt', poll: false, url: 'https://r11-sfdh-scm-001.devops.in.idemia.com/bitbucket/scm/devops/rt-gen-toolbox.git'
           //load script
           def cleanup = load 'jobCleanup.groovy'
-          //
-          use(groovy.time.TimeCategory) {
-            cleanup.generationFolderCleanUp(6.month, true)
+          //check entry
+          def userRetention = params.retention
+          if (userRetention != null && !userRetention.isEmpty() && userRetention.isInteger()) {
+            def integerRetention = userRetention.toInteger()
+            //run cleanup
+            use(groovy.time.TimeCategory) {
+              cleanup.generationFolderCleanUp(integerRetention.month, params.dryRun)
+            }
+          } else {
+            error 'The provided input for retention is either empty, null, or not an integer...'
           }
         }
       }
