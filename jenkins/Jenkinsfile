@@ -15,7 +15,7 @@ pipeline {
       trim: true
     )
     booleanParam(
-      defaultValue: true,
+      defaultValue: false,
       description: '''dryRun:<ul><li><b>True</b>: Will run in dryRun and only disply</li><li><b>False</b>: Will perform deletion according to <code>$retention</code> value.</li></ul>''',
       name: 'dryRun'
     )
