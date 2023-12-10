@@ -1,21 +1,40 @@
 ---
 - name: Retrieve OS and IP information
   hosts: all
-  vars:
-    template_src: templates
-    template_dest: reports
   connection: local
   gather_facts: true
   tasks:
+    #- name: Write the new EC2 instance host key to known hosts
+    #  shell: "ssh-keyscan -H {{ inventory_hostname }} >> ~/.ssh/known_hosts"
+
     - name: Display OS information
       debug:
         msg: "Host {{ inventory_hostname }} has {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
     - name: Display IP address
       debug:
         msg: "Host {{ inventory_hostname }} IP address is {{ ansible_host }}"
-    - name: Gather informations
+
+    - name: Gather information
       set_fact:
-        host_information: "{{ host_information | default({}) | combine({ inventory_hostname: { 'os': ansible_distribution + ' ' + ansible_distribution_version, 'ip': ansible_host } }) }}"
+        host_information: >-
+          {{
+            host_information | default({}) | combine({
+              inventory_hostname: {
+                'os': ansible_distribution + ' ' + ansible_distribution_version,
+                'ip': ansible_host
+              }
+            })
+          }}
+
+- name: Generate Reports
+  hosts: localhost
+  connection: local
+  vars:
+    template_src: templates
+    template_dest: reports
+  gather_facts: false
+  tasks:
     - name: Create CSV report
       template:
         src: '{{ template_src }}/report_csv.j2'
