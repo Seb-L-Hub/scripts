@@ -15,6 +15,10 @@
       debug:
         msg: "Host {{ inventory_hostname }} IP address is {{ ansible_host }}"
 
+    - name: Get jenkins instance
+      ansible.builtin.shell: docker ps -a --format "table {{ '{{' }} .Names {{ '}}' }}" | grep "jenkins" | awk '{printf("%s;",$0)}'
+      register: jk
+
     - name: Gather information
       set_fact:
         host_information: >-
@@ -22,7 +26,8 @@
             host_information | default({}) | combine({
               inventory_hostname: {
                 'os': ansible_distribution + ' ' + ansible_distribution_version,
-                'ip': ansible_host
+                'ip': ansible_host,
+                'jenkins': jk
               }
             })
           }}
