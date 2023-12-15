@@ -1,7 +1,7 @@
 ---
 - name: Retrieve informations
   hosts: all
-  connection: local
+  #connection: local
   gather_facts: true
   tasks:
     #- name: Add host key to known hosts
@@ -13,24 +13,28 @@
 
     - name: Display IP address
       debug:
-        msg: "Host {{ inventory_hostname }} IP address is {{ ansible_host }}"
+        msg: "Host {{ inventory_hostname }} IP address is {{ ansible_default_ipv4.address }}"
 
-    - name: Get jenkins instance
-      ansible.builtin.shell: docker ps -a --format "table {{ '{{' }} .Names {{ '}}' }}" | grep "jenkins" | awk '{printf("%s;",$0)}'
-      register: jk
+    #- name: Get jenkins instance
+    #  ansible.builtin.shell: docker ps -a --format "table {{ '{{' }} .Names {{ '}}' }}" | grep "jenkins" | awk '{printf("%s;",$0)}'
+    #  register: jk
 
-    - name: Gather information
+    - name: Gather informations
       set_fact:
         host_information: >-
           {{
             host_information | default({}) | combine({
               inventory_hostname: {
                 'os': ansible_distribution + ' ' + ansible_distribution_version,
-                'ip': ansible_host,
-                'jenkins': jk
+                'ip': ansible_default_ipv4.address
               }
             })
           }}
+    - name: Register gathered informations
+      add_host:
+        name: "DUMMY_HOST"
+        host_info: "{{ host_information }}"
+
 #Build report
 - name: Generate Reports
   hosts: localhost
@@ -40,11 +44,14 @@
     template_dest: reports
   gather_facts: false
   tasks:
+    - name: Set variable
+      set_fact:
+        host_information: "{{ hostvars['DUMMY_HOST']['host_info'] }}"
     - name: Create CSV report
       template:
         src: '{{ template_src }}/report_csv.j2'
-        dest: '{{ template_dest }}/host_information.csv'
+        dest: '{{ template_dest }}/report.csv'
     - name: Create HTML report
       template:
         src: '{{ template_src }}/report_html.j2'
-        dest: '{{ template_dest }}/host_information.html'
+        dest: '{{ template_dest }}/report.html'
