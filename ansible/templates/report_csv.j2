@@ -1,4 +1,9 @@
-Host,OS,IP Address
-{% for host, info in host_information.items() %}
-{{ host }},{{ info.os }},{{ info.ip }}
+sep=;
+Host;OS;IP Address
+{% for h in ansible_play_hosts_all | sort %}
+{% if h in ansible_play_hosts %}
+{{ h }};Success;{{ hostvars[h]['ansible_distribution'] }} {{ hostvars[h]['ansible_distribution_version'] }};{{ hostvars[h]['ansible_default_ipv4']['address'] }}
+{% else %}
+{{ h }};Failed;-;-
+{% endif %}
 {% endfor %}
